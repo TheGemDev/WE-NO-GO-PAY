@@ -155,6 +155,9 @@ function refresh() {
   $("saveAll").textContent = `₦${allImg.toLocaleString()}`;
   $("saveSplitLabel").textContent = `Split (${img.length} + ${txt.length})`;
   $("saveSplit").textContent = `₦${cost.toLocaleString()}`;
+  const pg = k => k === 1 ? "page" : "pages";
+  $("dlImg").textContent = `Download "${img.length}" colored ${pg(img.length)}`;
+  $("dlTxt").textContent = `Download "${txt.length}" black & white ${pg(txt.length)}`;
   $("dlImg").disabled = !img.length;
   $("dlTxt").disabled = !txt.length;
 }
