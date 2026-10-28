@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>We No Go Pay</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e2e0da;
+    --img: #c2410c; --img-bg: #fff1e8; --txt: #15803d; --txt-bg: #ecfdf3; --accent: #1d1d1b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --card: #20201e; --ink: #f1f0ec; --muted: #a3a29c; --line: #34332f;
+            --img: #fb923c; --img-bg: #3a2416; --txt: #4ade80; --txt-bg: #15301f; --accent: #f1f0ec; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: clamp(36px, 8vw, 64px); line-height: 1.05; letter-spacing: -0.02em; margin: 8px 0 10px; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  footer a { color: var(--ink); }
+  p.sub { margin: 0 0 20px; color: var(--muted); }
+  #drop { border: 2px dashed var(--line); border-radius: 12px; background: var(--card);
+          padding: 36px 16px; text-align: center; cursor: pointer; }
+  #drop.over { border-color: var(--accent); }
+  #drop strong { display: block; font-size: 17px; margin-bottom: 4px; }
+  #drop span { color: var(--muted); }
+  .bar { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+         padding: 16px; margin: 16px 0; gap: 12px 24px; flex-wrap: wrap; align-items: center; }
+  .bar.show { display: flex; }
+  .stat b { font-size: 20px; display: block; }
+  .stat.i b { color: var(--img); } .stat.t b { color: var(--txt); }
+  .stat small { color: var(--muted); }
+  label.ctl { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); }
+  label.ctl input[type=number] { width: 90px; padding: 6px 8px; border: 1px solid var(--line);
+         border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+  .actions { width: 100%; display: flex; gap: 10px; flex-wrap: wrap; }
+  button { font: inherit; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--accent);
+           background: var(--accent); color: var(--bg); cursor: pointer; }
+  button.ghost { background: transparent; color: var(--ink); }
+  button:disabled { opacity: .4; cursor: default; }
+  #save { display: none; background: var(--txt-bg); border: 2px solid var(--txt); border-radius: 12px;
+          padding: 18px 16px; margin: 16px 0; }
+  #save.show { display: block; }
+  #save .big { font-size: clamp(28px, 6vw, 44px); font-weight: 800; color: var(--txt); line-height: 1.1; margin: 4px 0 8px; }
+  #save .why { color: var(--muted); }
+  #save .math { display: grid; grid-template-columns: auto auto; gap: 2px 16px; justify-content: start; margin-top: 8px; }
+  #save .math span:nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; }
+  #save .math .strike { text-decoration: line-through; color: var(--muted); }
+  #status { color: var(--muted); margin: 12px 0; min-height: 1.5em; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+  .pg { background: var(--card); border: 2px solid var(--line); border-radius: 10px; padding: 8px;
+        cursor: pointer; user-select: none; }
+  .pg.image { border-color: var(--img); background: var(--img-bg); }
+  .pg.text  { border-color: var(--txt); background: var(--txt-bg); }
+  .pg canvas { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; }
+  .pg .meta { display: flex; justify-content: space-between; font-size: 12px; margin-top: 6px; }
+  .pg.image .tag { color: var(--img); font-weight: 600; }
+  .pg.text .tag { color: var(--txt); font-weight: 600; }
+  .hint { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>We No Go Pay</h1>
+  <p class="sub">Only pay color price for pages that need color.</p>
+
+  <div id="drop">
+    <strong>Drop PDF</strong>
+    <span>or tap to choose</span>
+    <input type="file" id="file" accept="application/pdf" hidden>
+  </div>
+
+  <div class="bar" id="bar">
+    <div class="stat i"><b id="nImg">0</b><small>color</small></div>
+    <div class="stat t"><b id="nTxt">0</b><small>B&amp;W</small></div>
+    <label class="ctl">Color ₦<input type="number" id="pImg" value="300" min="0"></label>
+    <label class="ctl">B&amp;W ₦<input type="number" id="pTxt" value="100" min="0"></label>
+    <label class="ctl">Min image %<input type="number" id="minArea" value="2" min="0" max="100" step="0.5"></label>
+    <div class="actions">
+      <button id="dlImg" disabled>Download color</button>
+      <button id="dlTxt" class="ghost" disabled>Download B&amp;W</button>
+    </div>
+  </div>
+
+  <div id="save">
+    <div class="why" id="saveWhy"></div>
+    <div class="big" id="saveBig"></div>
+    <div class="math">
+      <span>All color</span><span class="strike" id="saveAll"></span>
+      <span id="saveSplitLabel"></span><span id="saveSplit"></span>
+    </div>
+  </div>
+
+  <div id="status"></div>
+  <p class="hint" id="hint" hidden>Tap a page to switch it.</p>
+  <div id="grid"></div>
+  <footer>By Gabriel Momoh · <a href="https://github.com/gemmomoh" target="_blank" rel="noopener">GitHub</a></footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = id => document.getElementById(id);
+const OPS = pdfjsLib.OPS;
+const IMAGE_OPS = new Set([
+  OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject,
+  OPS.paintJpegXObject, OPS.paintImageXObjectRepeat, OPS.paintImageMaskXObjectRepeat,
+  OPS.paintInlineImageXObjectGroup, OPS.paintImageMaskXObjectGroup,
+].filter(op => op !== undefined));
+
+let bytes = null, fileName = "document", pages = [];   // pages[i] = { area, isImage, el }
+let runId = 0;
+
+// Largest fraction of the page covered by any single image (0..1).
+async function imageCoverage(page) {
+  const [x1, y1, x2, y2] = page.view;
+  const pageArea = Math.abs((x2 - x1) * (y2 - y1)) || 1;
+  const ops = await page.getOperatorList();
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  let best = 0;
+  for (let i = 0; i < ops.fnArray.length; i++) {
+    const fn = ops.fnArray[i], args = ops.argsArray[i];
+    if (fn === OPS.save) stack.push(ctm);
+    else if (fn === OPS.restore) ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
+    else if (fn === OPS.transform) ctm = pdfjsLib.Util.transform(ctm, args);
+    else if (fn === OPS.paintFormXObjectBegin) {
+      stack.push(ctm);
+      if (args && args[0]) ctm = pdfjsLib.Util.transform(ctm, args[0]);
+    } else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
+    else if (IMAGE_OPS.has(fn)) {
+      // Images are drawn into the unit square, so the CTM determinant is the drawn area.
+      const area = Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2]);
+      best = Math.max(best, Math.min(1, area / pageArea) || 0.0001);
+    }
+  }
+  return best;
+}
+
+async function renderThumb(page, canvas) {
+  const vp1 = page.getViewport({ scale: 1 });
+  const vp = page.getViewport({ scale: 220 / vp1.width });
+  canvas.width = vp.width; canvas.height = vp.height;
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+}
+
+function classify() {
+  const min = (parseFloat($("minArea").value) || 0) / 100;
+  pages.forEach(p => { if (!p.manual) p.isImage = p.area > 0 && p.area >= min; });
+  refresh();
+}
+
+function refresh() {
+  const img = [], txt = [];
+  pages.forEach((p, i) => {
+    if (!p.el) return;
+    (p.isImage ? img : txt).push(i + 1);
+    p.el.className = "pg " + (p.isImage ? "image" : "text");
+    p.el.querySelector(".tag").textContent = (p.isImage ? "COLOR" : "B&W") + (p.manual ? " ✎" : "");
+  });
+  const pI = +$("pImg").value || 0, pT = +$("pTxt").value || 0;
+  const cost = img.length * pI + txt.length * pT;
+  const allImg = (img.length + txt.length) * pI;
+  $("nImg").textContent = img.length;
+  $("nTxt").textContent = txt.length;
+  const n = img.length + txt.length, saved = allImg - cost;
+  $("save").classList.toggle("show", n > 0);
+  $("saveWhy").textContent = `₦${pI.toLocaleString()} color · ₦${pT.toLocaleString()} B&W`;
+  $("saveBig").textContent = saved > 0 ? `You save ₦${saved.toLocaleString()}` : "No savings";
+  $("saveAll").textContent = `₦${allImg.toLocaleString()}`;
+  $("saveSplitLabel").textContent = `Split (${img.length} + ${txt.length})`;
+  $("saveSplit").textContent = `₦${cost.toLocaleString()}`;
+  $("dlImg").disabled = !img.length;
+  $("dlTxt").disabled = !txt.length;
+}
+
+async function load(file) {
+  const id = ++runId;
+  fileName = file.name.replace(/\.pdf$/i, "");
+  bytes = new Uint8Array(await file.arrayBuffer());
+  pages = [];
+  $("grid").innerHTML = "";
+  $("bar").classList.add("show");
+  $("hint").hidden = false;
+
+  let pdf;
+  try {
+    pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+  } catch (e) {
+    $("status").textContent = "Can't open PDF: " + e.message;
+    return;
+  }
+  for (let n = 1; n <= pdf.numPages; n++) {
+    if (id !== runId) return;
+    $("status").textContent = `Checking ${n}/${pdf.numPages}…`;
+    const page = await pdf.getPage(n);
+    const el = document.createElement("div");
+    el.innerHTML = `<canvas></canvas><div class="meta"><span>Page ${n}</span><span class="tag"></span></div>`;
+    const p = { area: await imageCoverage(page), isImage: false, manual: false, el };
+    pages.push(p);
+    el.onclick = () => { p.isImage = !p.isImage; p.manual = true; refresh(); };
+    $("grid").appendChild(el);
+    await renderThumb(page, el.querySelector("canvas"));
+    classify();
+    page.cleanup();
+  }
+  const scanned = pages.every(p => p.area > 0.8);
+  $("status").textContent = scanned
+    ? "Looks scanned. Tap pages to sort."
+    : `${pdf.numPages} pages.`;
+}
+
+async function download(wantImage) {
+  const btn = wantImage ? $("dlImg") : $("dlTxt");
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Building…";
+  try {
+    const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+    const out = await PDFLib.PDFDocument.create();
+    const idx = pages.map((p, i) => p.isImage === wantImage ? i : -1).filter(i => i >= 0);
+    (await out.copyPages(src, idx)).forEach(pg => out.addPage(pg));
+    const blob = new Blob([await out.save()], { type: "application/pdf" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${fileName} - ${wantImage ? "COLOR" : "BW"}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch (e) {
+    $("status").textContent = "Can't build PDF: " + e.message;
+  }
+  btn.textContent = label; btn.disabled = false;
+}
+
+const drop = $("drop");
+drop.onclick = () => $("file").click();
+$("file").onchange = e => e.target.files[0] && load(e.target.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove("over");
+  const f = e.dataTransfer.files[0];
+  if (f) load(f);
+};
+$("minArea").oninput = classify;
+$("pImg").oninput = refresh;
+$("pTxt").oninput = refresh;
+$("dlImg").onclick = () => download(true);
+$("dlTxt").onclick = () => download(false);
+</script>
+</body>
+</html>
