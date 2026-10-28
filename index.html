@@ -50,18 +50,6 @@
   #save .math span:nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; }
   #save .math .strike { text-decoration: line-through; color: var(--muted); }
   #status { color: var(--muted); margin: 12px 0; min-height: 1.5em; }
-  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
-  .pg { background: var(--card); border: 2px solid var(--line); border-radius: 10px; padding: 8px;
-        cursor: pointer; user-select: none; }
-  .pg.image { border-color: var(--img); background: var(--img-bg); }
-  .pg.text  { border-color: var(--txt); background: var(--txt-bg); }
-  .pg canvas { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; }
-  .pg .meta { display: flex; justify-content: space-between; font-size: 12px; margin-top: 6px; }
-  .pg.image .tag { color: var(--img); font-weight: 600; }
-  .pg.text .tag { color: var(--txt); font-weight: 600; }
-  #pages { margin-top: 8px; }
-  #pages summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
-  #pages summary small { font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -96,10 +84,6 @@
   </div>
 
   <div id="status"></div>
-  <details id="pages" hidden>
-    <summary>Pages <small>· tap a page to switch it</small></summary>
-    <div id="grid"></div>
-  </details>
   <footer>
     Processing is done in your browser. No server used.<br>
     By <a href="https://github.com/gemmomoh" target="_blank" rel="noopener">Gabriel Momoh</a> ·
@@ -121,7 +105,7 @@ const IMAGE_OPS = new Set([
   OPS.paintInlineImageXObjectGroup, OPS.paintImageMaskXObjectGroup,
 ].filter(op => op !== undefined));
 
-let bytes = null, fileName = "document", pages = [];   // pages[i] = { area, isImage, el }
+let bytes = null, fileName = "document", pages = [];   // pages[i] = { area, isImage }
 let runId = 0;
 
 // Largest fraction of the page covered by any single image (0..1).
@@ -150,27 +134,15 @@ async function imageCoverage(page) {
   return best;
 }
 
-async function renderThumb(page, canvas) {
-  const vp1 = page.getViewport({ scale: 1 });
-  const vp = page.getViewport({ scale: 220 / vp1.width });
-  canvas.width = vp.width; canvas.height = vp.height;
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
-}
-
 function classify() {
   const min = 0.02;   // ignore tiny images like logos
-  pages.forEach(p => { if (!p.manual) p.isImage = p.area > 0 && p.area >= min; });
+  pages.forEach(p => { p.isImage = p.area > 0 && p.area >= min; });
   refresh();
 }
 
 function refresh() {
   const img = [], txt = [];
-  pages.forEach((p, i) => {
-    if (!p.el) return;
-    (p.isImage ? img : txt).push(i + 1);
-    p.el.className = "pg " + (p.isImage ? "image" : "text");
-    p.el.querySelector(".tag").textContent = (p.isImage ? "COLOR" : "B&W") + (p.manual ? " ✎" : "");
-  });
+  pages.forEach((p, i) => (p.isImage ? img : txt).push(i + 1));
   const pI = +$("pImg").value || 0, pT = +$("pTxt").value || 0;
   const cost = img.length * pI + txt.length * pT;
   const allImg = (img.length + txt.length) * pI;
@@ -192,9 +164,7 @@ async function load(file) {
   fileName = file.name.replace(/\.pdf$/i, "");
   bytes = new Uint8Array(await file.arrayBuffer());
   pages = [];
-  $("grid").innerHTML = "";
   $("bar").classList.add("show");
-  $("pages").hidden = false;
 
   let pdf;
   try {
@@ -207,19 +177,13 @@ async function load(file) {
     if (id !== runId) return;
     $("status").textContent = `Checking ${n}/${pdf.numPages}…`;
     const page = await pdf.getPage(n);
-    const el = document.createElement("div");
-    el.innerHTML = `<canvas></canvas><div class="meta"><span>Page ${n}</span><span class="tag"></span></div>`;
-    const p = { area: await imageCoverage(page), isImage: false, manual: false, el };
-    pages.push(p);
-    el.onclick = () => { p.isImage = !p.isImage; p.manual = true; refresh(); };
-    $("grid").appendChild(el);
-    await renderThumb(page, el.querySelector("canvas"));
+    pages.push({ area: await imageCoverage(page), isImage: false });
     classify();
     page.cleanup();
   }
   const scanned = pages.every(p => p.area > 0.8);
   $("status").textContent = scanned
-    ? "Looks scanned. Tap pages to sort."
+    ? "Looks scanned, so every page counts as color."
     : `${pdf.numPages} pages.`;
 }
 
