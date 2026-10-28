@@ -58,7 +58,9 @@
   .pg .meta { display: flex; justify-content: space-between; font-size: 12px; margin-top: 6px; }
   .pg.image .tag { color: var(--img); font-weight: 600; }
   .pg.text .tag { color: var(--txt); font-weight: 600; }
-  .hint { font-size: 13px; color: var(--muted); }
+  #pages { margin-top: 8px; }
+  #pages summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
+  #pages summary small { font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -94,8 +96,10 @@
   </div>
 
   <div id="status"></div>
-  <p class="hint" id="hint" hidden>Tap a page to switch it.</p>
-  <div id="grid"></div>
+  <details id="pages" hidden>
+    <summary>Pages <small>· tap a page to switch it</small></summary>
+    <div id="grid"></div>
+  </details>
   <footer>By Gabriel Momoh · <a href="https://github.com/gemmomoh" target="_blank" rel="noopener">GitHub</a></footer>
 </main>
 
@@ -186,7 +190,7 @@ async function load(file) {
   pages = [];
   $("grid").innerHTML = "";
   $("bar").classList.add("show");
-  $("hint").hidden = false;
+  $("pages").hidden = false;
 
   let pdf;
   try {
