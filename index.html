@@ -36,6 +36,7 @@
   label.ctl input[type=number] { width: 90px; padding: 6px 8px; border: 1px solid var(--line);
          border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
   .actions { width: 100%; display: flex; gap: 10px; flex-wrap: wrap; }
+  .actions button { flex: 1 1 240px; padding: 13px 16px; font-weight: 600; }
   button { font: inherit; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--accent);
            background: var(--accent); color: var(--bg); cursor: pointer; }
   button.ghost { background: transparent; color: var(--ink); }
@@ -79,10 +80,9 @@
     <div class="stat t"><b id="nTxt">0</b><small>B&amp;W</small></div>
     <label class="ctl">Color ₦<input type="number" id="pImg" value="300" min="0"></label>
     <label class="ctl">B&amp;W ₦<input type="number" id="pTxt" value="100" min="0"></label>
-    <label class="ctl">Min image %<input type="number" id="minArea" value="2" min="0" max="100" step="0.5"></label>
     <div class="actions">
-      <button id="dlImg" disabled>Download color</button>
-      <button id="dlTxt" class="ghost" disabled>Download B&amp;W</button>
+      <button id="dlImg" disabled>Download colored pages</button>
+      <button id="dlTxt" class="ghost" disabled>Download black &amp; white pages</button>
     </div>
   </div>
 
@@ -100,7 +100,11 @@
     <summary>Pages <small>· tap a page to switch it</small></summary>
     <div id="grid"></div>
   </details>
-  <footer>By Gabriel Momoh · <a href="https://github.com/gemmomoh" target="_blank" rel="noopener">GitHub</a></footer>
+  <footer>
+    Processing is done in your browser. No server used.<br>
+    By <a href="https://github.com/gemmomoh" target="_blank" rel="noopener">Gabriel Momoh</a> ·
+    <a href="https://github.com/TheGemDev/WE-NO-GO-PAY" target="_blank" rel="noopener">Source on GitHub</a>
+  </footer>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -154,7 +158,7 @@ async function renderThumb(page, canvas) {
 }
 
 function classify() {
-  const min = (parseFloat($("minArea").value) || 0) / 100;
+  const min = 0.02;   // ignore tiny images like logos
   pages.forEach(p => { if (!p.manual) p.isImage = p.area > 0 && p.area >= min; });
   refresh();
 }
@@ -250,7 +254,6 @@ drop.ondrop = e => {
   const f = e.dataTransfer.files[0];
   if (f) load(f);
 };
-$("minArea").oninput = classify;
 $("pImg").oninput = refresh;
 $("pTxt").oninput = refresh;
 $("dlImg").onclick = () => download(true);
